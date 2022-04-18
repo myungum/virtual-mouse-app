@@ -17,26 +17,32 @@ import android.widget.Button;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
+import java.net.NetworkInterface;
+import java.net.SocketException;
 import java.nio.ByteBuffer;
 
 public class MainActivity extends AppCompatActivity {
-    final int FLAG_LEFT = 0x01;
-    final int FLAG_RIGHT = 0x02;
-    final int FLAG_W = 0x04;
-    final int FLAG_S = 0x08;
-    final int FLAG_TAB = 0x10;
-    final int FLAG_HOLD = 0x20;
-    private int flag = 0x00;
-    Object mSensorValueLock = new Object();
-    Button mButtonLeft, mButtonRight, mButtonW, mButtonS, mButtonTab, mButtonHold;
-    float mGyroX, mGyroY, mGyroZ;
-    float mGravityX, mGravityZ;
-    final double WEIGHT = 70.0f; // mouse sensitivity
+    public final int FLAG_LEFT = 0x01;
+    public final int FLAG_RIGHT = 0x02;
+    public final int FLAG_W = 0x04;
+    public final int FLAG_S = 0x08;
+    public final int FLAG_TAB = 0x10;
+    public final int FLAG_HOLD = 0x20;
+    private int mFlag = 0x00;
+    private String mIP = null;
+    private final int mMainPort = 20415;
+    private final int mReplyPort = 20416;
+    private Object mSensorValueLock = new Object();
+    private Button mButtonLeft, mButtonRight, mButtonW, mButtonS, mButtonTab, mButtonHold;
+    private float mGyroX, mGyroY, mGyroZ;
+    private float mGravityX, mGravityZ;
+    private final double WEIGHT = 70.0f; // mouse sensitivity
     private SensorManager mSensorManager;
     private Sensor mGyroSensor;
     private Sensor mGravitySensor;
     private DatagramSocket mSocket = null;
-    public int mPacketCount = 0;
+    private DatagramSocket mReplySocket = null;
+    private int mPacketCount = 0;
 
 
     @Override
@@ -61,10 +67,10 @@ public class MainActivity extends AppCompatActivity {
                 int currentFlag = (int)v.getTag();
                 switch (event.getAction() ) {
                     case MotionEvent.ACTION_DOWN:
-                        flag |= currentFlag;
+                        mFlag |= currentFlag;
                         break;
                     case MotionEvent.ACTION_UP:
-                        flag &= ~currentFlag;
+                        mFlag &= ~currentFlag;
                         break;
                 }
                 return true;
@@ -110,6 +116,31 @@ public class MainActivity extends AppCompatActivity {
 
         })).start();
 
+        // find server's ip in LAN
+        (new Thread(() -> {
+            while (true) {
+                try {
+                    if (mIP != null)
+                        break;
+
+                    if (mReplySocket == null)
+                        mReplySocket = new DatagramSocket(mReplyPort);
+                    DatagramPacket dp = new DatagramPacket(new byte[10], 10);
+
+                    // send broadcast packet
+                    sendAndForget(mReplySocket, new byte[1], "255.255.255.255", mReplyPort);
+                    // receive reply packet (without own packet)
+                    mReplySocket.receive(dp);
+                    if (!isThisMyIpAddress(dp.getAddress()))
+                        mIP = dp.getAddress().getHostName();
+                    Thread.sleep(500);
+                } catch (Exception ex) {
+                    Log.e("get server's ip", ex.getMessage());
+                    mReplySocket = null;
+                }
+            }
+
+        })).start();
     }
 
     public void onResume() {
@@ -124,6 +155,33 @@ public class MainActivity extends AppCompatActivity {
         mSensorManager.unregisterListener(gyroListener);
         mSensorManager.unregisterListener(gravityListener);
         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+    }
+
+    // udp send
+    private void sendAndForget(DatagramSocket socket, byte[] data, String ip, int port) {
+        Thread th = (new Thread(() -> {
+            try {
+                DatagramPacket dp = new DatagramPacket(data, data.length, InetAddress.getByName(ip), port);
+                socket.send(dp);
+            } catch (Exception ex) {
+                Log.e("sendAndForget", ex.getMessage());
+            }
+        }));
+        th.start();
+    }
+
+    // If the address is localhost return true. source : https://stackoverflow.com/questions/2406341/how-to-check-if-an-ip-address-is-the-local-host-on-a-multi-homed-system
+    public boolean isThisMyIpAddress(InetAddress addr) {
+        // Check if the address is a valid special local or loop back
+        if (addr.isAnyLocalAddress() || addr.isLoopbackAddress())
+            return true;
+
+        // Check if the address is defined on any interface
+        try {
+            return NetworkInterface.getByInetAddress(addr) != null;
+        } catch (SocketException e) {
+            return false;
+        }
     }
 
     public SensorEventListener gyroListener = new SensorEventListener() {
@@ -153,27 +211,24 @@ public class MainActivity extends AppCompatActivity {
             final int y = (int)(WEIGHT * moveY);
             if (Math.abs(x) + Math.abs(y) >= 0) {
                 mPacketCount++;
-                Thread th = (new Thread(() -> {
-                    try {
-                        ByteBuffer buf = ByteBuffer.allocate(2 * Integer.BYTES);
-                        buf.putInt(x);
-                        buf.putInt(y);
+                ByteBuffer buf = ByteBuffer.allocate(2 * Integer.BYTES);
+                buf.putInt(x);
+                buf.putInt(y);
 
-                        byte pos[] = buf.array();
-                        byte data[] = new byte[pos.length + 1];
-                        System.arraycopy(pos, 0, data, 0, pos.length);
-                        data[pos.length] = (byte)flag; // bit flag
-                        DatagramPacket dp = new DatagramPacket(data, data.length, InetAddress.getByName(getString(R.string.server_ip)), Integer.parseInt(getString(R.string.server_port)));
-
-                        if (mSocket == null)
-                            mSocket = new DatagramSocket();
-                        mSocket.send(dp);
-                    } catch (Exception ex) {
-                        Log.e("udp", ex.getMessage());
-                        mSocket = null;
+                byte pos[] = buf.array();
+                byte data[] = new byte[pos.length + 1];
+                System.arraycopy(pos, 0, data, 0, pos.length);
+                data[pos.length] = (byte) mFlag; // bit flag
+                if (mIP != null) {
+                    if (mSocket == null) {
+                        try {
+                            mSocket = new DatagramSocket(mMainPort);
+                        } catch (SocketException e) {
+                            e.printStackTrace();
+                        }
                     }
-                }));
-                th.start();
+                    sendAndForget(mSocket, data, mIP, mMainPort);
+                }
             }
         }
     };
