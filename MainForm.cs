@@ -7,19 +7,19 @@ using System.Runtime.InteropServices;
 
 namespace agun_server
 {
-    public partial class Form1 : Form
+    public partial class MainForm : Form
     {
         [DllImport("user32.dll")]
         // https://stackoverflow.com/questions/8272681/how-can-i-simulate-a-mouse-click-at-a-certain-position-on-the-screen
         private static extern void mouse_event(int dwFlags, int dx, int dy, int cButtons, int dwExtraInfo);
-        private readonly uint KEYDOWN = 0x0;
-        private readonly uint KEYUP = 0x2;
-
         private readonly int MOUSEEVENTF_MOVE = 0x01;
         private readonly int MOUSEEVENTF_LEFTDOWN = 0x02;
         private readonly int MOUSEEVENTF_LEFTUP = 0x04;
         private readonly int MOUSEEVENTF_RIGHTDOWN = 0x08;
         private readonly int MOUSEEVENTF_RIGHTUP = 0x10;
+
+        private readonly int MAIN_PORT = 20415;
+        private readonly int REPLY_PORT = 20416;
 
         private bool left_down = false;
         private bool right_down = false;
@@ -28,17 +28,21 @@ namespace agun_server
         private bool tab_down = false;
         private bool hold_down = false;
 
-        Thread th;
-        public Form1()
+        Thread mainThread;
+        Thread replyThread;
+        public MainForm()
         {
             InitializeComponent();
         }
 
-        private void Form1_Load(object sender, EventArgs e)
+        private void MainForm_Load(object sender, EventArgs e)
         {
-            th = new Thread(() =>
+            lblPort.Text = "Port : " + MAIN_PORT;
+
+            // main thread. receive state of mouse and keyboard
+            mainThread = new Thread(() =>
             {
-                UdpClient client = new UdpClient(20415);
+                UdpClient client = new UdpClient(MAIN_PORT);
                 IPEndPoint ipep = null;
                 Keyboard keyboard = new Keyboard();
                 
@@ -88,8 +92,24 @@ namespace agun_server
                     }
                 }
             });
-            th.IsBackground = true;
-            th.Start();
+            mainThread.IsBackground = true;
+            mainThread.Start();
+
+            // reply thread. reply to broadcast packets. The sender will know server`s IP.
+            replyThread = new Thread(() =>
+            {
+                UdpClient client = new UdpClient(REPLY_PORT);
+                IPEndPoint ipep = null;
+
+                while (true)
+                {
+                    byte[] data = client.Receive(ref ipep);
+                    client.Send(data, 1, ipep); // reply just 1 byte
+                }
+
+            });
+            replyThread.IsBackground = true;
+            replyThread.Start();
         }
     }
 }

@@ -1,7 +1,7 @@
 ﻿
 namespace agun_server
 {
-    partial class Form1
+    partial class MainForm
     {
         /// <summary>
         /// 필수 디자이너 변수입니다.
@@ -29,21 +29,39 @@ namespace agun_server
         /// </summary>
         private void InitializeComponent()
         {
+            this.lblPort = new System.Windows.Forms.Label();
             this.SuspendLayout();
             // 
-            // Form1
+            // lblPort
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 12F);
+            this.lblPort.AutoSize = true;
+            this.lblPort.Location = new System.Drawing.Point(12, 11);
+            this.lblPort.Name = "lblPort";
+            this.lblPort.Size = new System.Drawing.Size(0, 15);
+            this.lblPort.TabIndex = 0;
+            // 
+            // MainForm
+            // 
+            this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(711, 450);
-            this.Name = "Form1";
-            this.Text = "Form1";
-            this.Load += new System.EventHandler(this.Form1_Load);
+            this.ClientSize = new System.Drawing.Size(260, 42);
+            this.Controls.Add(this.lblPort);
+            this.Font = new System.Drawing.Font("맑은 고딕", 9F);
+            this.Margin = new System.Windows.Forms.Padding(3, 4, 3, 4);
+            this.MaximizeBox = false;
+            this.MinimizeBox = false;
+            this.Name = "MainForm";
+            this.ShowIcon = false;
+            this.Text = "a-gun server";
+            this.Load += new System.EventHandler(this.MainForm_Load);
             this.ResumeLayout(false);
+            this.PerformLayout();
 
         }
 
         #endregion
+
+        private System.Windows.Forms.Label lblPort;
     }
 }
 
