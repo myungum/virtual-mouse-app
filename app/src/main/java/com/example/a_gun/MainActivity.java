@@ -13,6 +13,7 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.Button;
+import android.widget.Toast;
 
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
@@ -29,9 +30,7 @@ public class MainActivity extends AppCompatActivity {
     public final int FLAG_TAB = 0x10;
     public final int FLAG_HOLD = 0x20;
     private int mFlag = 0x00;
-    private String mIP = null;
-    private final int mMainPort = 20415;
-    private final int mReplyPort = 20416;
+
     private Object mSensorValueLock = new Object();
     private Button mButtonLeft, mButtonRight, mButtonW, mButtonS, mButtonTab, mButtonHold;
     private float mGyroX, mGyroY, mGyroZ;
@@ -40,10 +39,7 @@ public class MainActivity extends AppCompatActivity {
     private SensorManager mSensorManager;
     private Sensor mGyroSensor;
     private Sensor mGravitySensor;
-    private DatagramSocket mSocket = null;
-    private DatagramSocket mReplySocket = null;
-    private int mPacketCount = 0;
-
+    private UdpClient client;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -61,20 +57,17 @@ public class MainActivity extends AppCompatActivity {
         mGravitySensor = mSensorManager.getDefaultSensor(Sensor.TYPE_GRAVITY);
 
         // button touch listener (make flag)
-        View.OnTouchListener onTouchListener = new View.OnTouchListener() {
-            @Override
-            public boolean onTouch(View v, MotionEvent event) {
-                int currentFlag = (int)v.getTag();
-                switch (event.getAction() ) {
-                    case MotionEvent.ACTION_DOWN:
-                        mFlag |= currentFlag;
-                        break;
-                    case MotionEvent.ACTION_UP:
-                        mFlag &= ~currentFlag;
-                        break;
-                }
-                return true;
+        View.OnTouchListener onTouchListener = (v, event) -> {
+            int currentFlag = (int)v.getTag();
+            switch (event.getAction() ) {
+                case MotionEvent.ACTION_DOWN:
+                    mFlag |= currentFlag;
+                    break;
+                case MotionEvent.ACTION_UP:
+                    mFlag &= ~currentFlag;
+                    break;
             }
+            return true;
         };
         // left button up/down event
         mButtonLeft.setTag(FLAG_LEFT);
@@ -100,47 +93,12 @@ public class MainActivity extends AppCompatActivity {
         mButtonHold.setTag(FLAG_HOLD);
         mButtonHold.setOnTouchListener(onTouchListener);
 
-        // get 'packets per second'
-        (new Thread(() -> {
-            int pre_cnt = 0;
-            while (true) {
 
-                try {
-                    Thread.sleep(1000);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-                Log.i("send cnt", (mPacketCount - pre_cnt) + " packets/sec");
-                pre_cnt = mPacketCount;
-            }
-
-        })).start();
-
-        // find server's ip in LAN
-        (new Thread(() -> {
-            while (true) {
-                try {
-                    if (mIP != null)
-                        break;
-
-                    if (mReplySocket == null)
-                        mReplySocket = new DatagramSocket(mReplyPort);
-                    DatagramPacket dp = new DatagramPacket(new byte[10], 10);
-
-                    // send broadcast packet
-                    sendAndForget(mReplySocket, new byte[1], "255.255.255.255", mReplyPort);
-                    // receive reply packet (without own packet)
-                    mReplySocket.receive(dp);
-                    if (!isThisMyIpAddress(dp.getAddress()))
-                        mIP = dp.getAddress().getHostName();
-                    Thread.sleep(500);
-                } catch (Exception ex) {
-                    Log.e("get server's ip", ex.getMessage());
-                    mReplySocket = null;
-                }
-            }
-
-        })).start();
+        client = new UdpClient();
+        client.resumeServerFinder(); // start finding server in LAN
+        client.setOnFindServerListener(serverIP -> runOnUiThread(() -> {
+            Toast.makeText(getApplicationContext(), "server`s ip : " + serverIP, Toast.LENGTH_SHORT).show();
+        }));
     }
 
     public void onResume() {
@@ -157,38 +115,9 @@ public class MainActivity extends AppCompatActivity {
         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
     }
 
-    // udp send
-    private void sendAndForget(DatagramSocket socket, byte[] data, String ip, int port) {
-        Thread th = (new Thread(() -> {
-            try {
-                DatagramPacket dp = new DatagramPacket(data, data.length, InetAddress.getByName(ip), port);
-                socket.send(dp);
-            } catch (Exception ex) {
-                Log.e("sendAndForget", ex.getMessage());
-            }
-        }));
-        th.start();
-    }
-
-    // If the address is localhost return true. source : https://stackoverflow.com/questions/2406341/how-to-check-if-an-ip-address-is-the-local-host-on-a-multi-homed-system
-    public boolean isThisMyIpAddress(InetAddress addr) {
-        // Check if the address is a valid special local or loop back
-        if (addr.isAnyLocalAddress() || addr.isLoopbackAddress())
-            return true;
-
-        // Check if the address is defined on any interface
-        try {
-            return NetworkInterface.getByInetAddress(addr) != null;
-        } catch (SocketException e) {
-            return false;
-        }
-    }
-
+    // gyro sensor
     public SensorEventListener gyroListener = new SensorEventListener() {
-
-        public void onAccuracyChanged(Sensor sensor, int acc) {
-        }
-
+        public void onAccuracyChanged(Sensor sensor, int acc) {}
         public void onSensorChanged(SensorEvent event) {
             // calculation formula source : https://hackmd.io/oaTqnj61RCasSOSzaFw3Yw?view, https://www.youtube.com/watch?v=cRP3xnpOsM0
             // but, this code use gravity instead of euler angle
@@ -210,7 +139,7 @@ public class MainActivity extends AppCompatActivity {
             final int x = (int)(WEIGHT * moveX);
             final int y = (int)(WEIGHT * moveY);
             if (Math.abs(x) + Math.abs(y) >= 0) {
-                mPacketCount++;
+
                 ByteBuffer buf = ByteBuffer.allocate(2 * Integer.BYTES);
                 buf.putInt(x);
                 buf.putInt(y);
@@ -219,25 +148,13 @@ public class MainActivity extends AppCompatActivity {
                 byte data[] = new byte[pos.length + 1];
                 System.arraycopy(pos, 0, data, 0, pos.length);
                 data[pos.length] = (byte) mFlag; // bit flag
-                if (mIP != null) {
-                    if (mSocket == null) {
-                        try {
-                            mSocket = new DatagramSocket(mMainPort);
-                        } catch (SocketException e) {
-                            e.printStackTrace();
-                        }
-                    }
-                    sendAndForget(mSocket, data, mIP, mMainPort);
-                }
+                client.send(data);
             }
         }
     };
-
+    // gravity sensor
     public SensorEventListener gravityListener = new SensorEventListener() {
-
-        public void onAccuracyChanged(Sensor sensor, int acc) {
-        }
-
+        public void onAccuracyChanged(Sensor sensor, int acc) {}
         public void onSensorChanged(SensorEvent event) {
             // float y = event.values[1]; consider only XZ-plane
             synchronized (mSensorValueLock) {
