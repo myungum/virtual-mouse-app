@@ -7,7 +7,7 @@
 
 위 프로젝트와 마찬가지로 게임에서 사용 가능합니다.
 
-<img src="https://github.com/myungum/virtual-mouse-app/blob/master/img/prototype.jpg" width="30%">
+<img src="https://github.com/myungum/virtual-mouse-app/blob/client/img/prototype.jpg" width="30%">
 
 ## 주의사항
 일부 프로그램에서 서버를 비정상 프로그램으로 인식할 수 있습니다(특히 온라인 게임).
@@ -21,6 +21,8 @@ Gyro sensor and gravity sensor are needed.
 
 ## 추가 개발 목표
 서버 업로드 O
+
+통신 코드 정리하기 (분리하기)
 
 클라이언트-서버 통신 동기화 (현재 UDP 패킷 무지성 난사 중)
 
