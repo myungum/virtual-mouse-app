@@ -104,6 +104,7 @@ namespace agun_server
                 while (true)
                 {
                     byte[] data = client.Receive(ref ipep);
+                    ipep.Port = REPLY_PORT;
                     client.Send(data, 1, ipep); // reply just 1 byte
                 }
 
