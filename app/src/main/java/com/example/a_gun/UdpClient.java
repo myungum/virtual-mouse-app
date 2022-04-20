@@ -2,12 +2,14 @@ package com.example.a_gun;
 
 import android.util.Log;
 
-import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
+import java.net.UnknownHostException;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
 
 public class UdpClient {
     public interface OnFindServerListener {
@@ -19,9 +21,9 @@ public class UdpClient {
     private final int mMainPort = 20415;
     private final int mReplyPort = 20416;
     private DatagramSocket mSocket = null;
-    private DatagramSocket mReplySocket = null;
-    private int mPacketCount = 0;
+    private DatagramSocket mServerFinderSocket = null;
     private OnFindServerListener onFindServerListener = null;
+    private BlockingQueue<DatagramPacket> sendWaitQueue;
 
     // If the address is localhost return true. source : https://stackoverflow.com/questions/2406341/how-to-check-if-an-ip-address-is-the-local-host-on-a-multi-homed-system
     private boolean isThisMyIpAddress(InetAddress addr) {
@@ -38,6 +40,32 @@ public class UdpClient {
     }
 
     public UdpClient() {
+        sendWaitQueue = new ArrayBlockingQueue<>(10);
+        // synchronized packet send (thread-safe send)
+        (new Thread(()->{
+            DatagramPacket packet;
+            while (true) {
+                try {
+                    packet = sendWaitQueue.take(); // block
+                    if (mSocket == null) {
+                        mSocket = new DatagramSocket(mMainPort);
+                    }
+                    mSocket.send(packet);
+                } catch (InterruptedException ie) {
+                    Log.e("queue interrupted", ie.getMessage());
+                    return;
+                } catch (SocketException ioe) {
+                    try {
+                        mSocket.close();
+                    } catch (Exception e) {
+                        Log.e("queue socket close", e.getMessage());
+                    }
+                    mSocket = null;
+                } catch (Exception e) {
+                    Log.e("queue exception", e.getMessage());
+                }
+            }
+        })).start();
     }
 
     public String getIP() {
@@ -51,8 +79,8 @@ public class UdpClient {
     // stop finding server
     public void pauseServerFinder() {
         mContinueFinding = false;
-        mReplySocket.close();
-        mReplySocket = null;
+        mServerFinderSocket.close();
+        mServerFinderSocket = null;
     }
 
     // find server's ip in LAN
@@ -62,15 +90,16 @@ public class UdpClient {
         (new Thread(() -> {
             while (mContinueFinding && mIP == null) {
                 try {
-                    if (mReplySocket == null)
-                        mReplySocket = new DatagramSocket(mReplyPort);
+                    if (mServerFinderSocket == null)
+                        mServerFinderSocket = new DatagramSocket(mReplyPort);
                     DatagramPacket dp = new DatagramPacket(new byte[10], 10);
                     // receive reply packet (without own packet)
-                    mReplySocket.receive(dp);
+                    mServerFinderSocket.receive(dp);
                     if (mIP == null && !isThisMyIpAddress(dp.getAddress())) {
                         mIP = dp.getAddress().getHostName();
                         if (onFindServerListener != null) {
                             onFindServerListener.onFindServer(mIP);
+                            mContinueFinding = false;
                         }
                     }
                 } catch (Exception ex) {
@@ -84,11 +113,8 @@ public class UdpClient {
         (new Thread(()-> {
             while (mContinueFinding && mIP == null) {
                 try {
-                    if (mReplySocket == null)
-                        mReplySocket = new DatagramSocket(mReplyPort);
-
                     // send broadcast packet
-                    send(mReplySocket, new byte[1], "255.255.255.255", mReplyPort);
+                    sendWaitQueue.add(new DatagramPacket(new byte[1], 1, InetAddress.getByName("255.255.255.255"), mReplyPort));
                     Thread.sleep(500);
                 } catch (Exception ex) {
                     Log.e("resumeServerFinder", ex.getMessage());
@@ -101,36 +127,12 @@ public class UdpClient {
         this.onFindServerListener = onFindServerListener;
     }
 
-    private void send(DatagramSocket socket, byte[] data, String destinationIP, int destinationPort) {
-        (new Thread(()-> {
-            try {
-                mPacketCount++;
-                DatagramPacket dp = new DatagramPacket(data, data.length, InetAddress.getByName(destinationIP), destinationPort);
-                socket.send(dp);
-            } catch (SocketException se) {
-            Log.e("send", se.getMessage());
-            } catch (IOException ioe) {
-                Log.e("send", ioe.getMessage());
-            }
-        })).start();
-    }
-
     public boolean send(byte[] data) {
-        if (mIP != null) {
-            if (mSocket == null) {
-                try {
-                    mSocket = new DatagramSocket(mMainPort);
-                } catch (SocketException e) {
-                    mSocket = null;
-                    e.printStackTrace();
-                }
-            }
-            send(mSocket, data, mIP, mMainPort);
-            return true;
+        try {
+            return sendWaitQueue.offer(new DatagramPacket(data, data.length, InetAddress.getByName(mIP), mMainPort));
+        } catch (UnknownHostException e) {
+            e.printStackTrace();
         }
-        else {
-            Log.i("send", "server not found");
-            return false;
-        }
+        return false;
     }
 }
