@@ -59,14 +59,17 @@ public class MainActivity extends AppCompatActivity {
         // button touch listener (make flag)
         View.OnTouchListener onTouchListener = (v, event) -> {
             int currentFlag = (int)v.getTag();
-            switch (event.getAction() ) {
-                case MotionEvent.ACTION_DOWN:
-                    mFlag |= currentFlag;
-                    break;
-                case MotionEvent.ACTION_UP:
-                    mFlag &= ~currentFlag;
-                    break;
+            synchronized (mSensorValueLock) {
+                switch (event.getAction() ) {
+                    case MotionEvent.ACTION_DOWN:
+                        mFlag |= currentFlag;
+                        break;
+                    case MotionEvent.ACTION_UP:
+                        mFlag &= ~currentFlag;
+                        break;
+                }
             }
+            make_and_send_data();
             return true;
         };
         // left button up/down event
@@ -115,41 +118,43 @@ public class MainActivity extends AppCompatActivity {
         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
     }
 
+    // make mouse status data and send
+    private void make_and_send_data() {
+        double moveX, moveY ; // y+ is bottom, because left-top of screen is (0, 0)
+
+        synchronized (mSensorValueLock) {
+            final double scar = Math.sqrt(mGravityX * mGravityX + mGravityZ * mGravityZ); // gravity vector size on XZ-plane
+            final double s = mGravityX / scar; // sin
+            final double c = mGravityZ / scar; // cos
+
+            moveX = -mGyroZ * c - mGyroX * s; // x+ is right
+            moveY = mGyroZ * s - mGyroX * c; // y+ is bottom, because left-top of screen is (0, 0)
+        }
+
+        final int x = (int)(WEIGHT * moveX);
+        final int y = (int)(WEIGHT * moveY);
+        if (Math.abs(x) + Math.abs(y) >= 0) {
+            ByteBuffer buf = ByteBuffer.allocate(2 * Integer.BYTES + 1);
+            buf.putInt(x);
+            buf.putInt(y);
+            buf.put((byte)mFlag);
+            client.send(buf.array());
+        }
+    }
+
     // gyro sensor
     public SensorEventListener gyroListener = new SensorEventListener() {
         public void onAccuracyChanged(Sensor sensor, int acc) {}
         public void onSensorChanged(SensorEvent event) {
             // calculation formula source : https://hackmd.io/oaTqnj61RCasSOSzaFw3Yw?view, https://www.youtube.com/watch?v=cRP3xnpOsM0
             // but, this code use gravity instead of euler angle
-            final double moveX;
-            final double moveY;
+
             synchronized (mSensorValueLock) {
                 mGyroX = event.values[0];
                 mGyroY = event.values[1];
                 mGyroZ = event.values[2];
-
-                double scar = Math.sqrt(mGravityX * mGravityX + mGravityZ * mGravityZ); // gravity vector size on XZ-plane
-                double s = mGravityX / scar; // sin
-                double c = mGravityZ / scar; // cos
-
-                moveX = -mGyroZ * c - mGyroX * s; // x+ is right
-                moveY = mGyroZ * s - mGyroX * c; // y+ is bottom, because left-top of screen is (0, 0)
             }
-
-            final int x = (int)(WEIGHT * moveX);
-            final int y = (int)(WEIGHT * moveY);
-            if (Math.abs(x) + Math.abs(y) >= 0) {
-
-                ByteBuffer buf = ByteBuffer.allocate(2 * Integer.BYTES);
-                buf.putInt(x);
-                buf.putInt(y);
-
-                byte pos[] = buf.array();
-                byte data[] = new byte[pos.length + 1];
-                System.arraycopy(pos, 0, data, 0, pos.length);
-                data[pos.length] = (byte) mFlag; // bit flag
-                client.send(data);
-            }
+            make_and_send_data();
         }
     };
     // gravity sensor
@@ -161,6 +166,7 @@ public class MainActivity extends AppCompatActivity {
                 mGravityX = event.values[0];
                 mGravityZ = event.values[2];
             }
+            make_and_send_data();
         }
     };
 }
