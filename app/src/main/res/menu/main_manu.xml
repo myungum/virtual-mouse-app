@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <item
+        android:id="@+id/menu_fast"
+        android:title="@string/fast" />
+    <item
+        android:id="@+id/menu_normal"
+        android:title="@string/normal" />
+    <item
+        android:id="@+id/menu_slow"
+        android:title="@string/slow" />
+</menu>

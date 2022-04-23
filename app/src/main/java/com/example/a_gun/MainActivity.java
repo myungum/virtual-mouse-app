@@ -5,6 +5,8 @@ import androidx.appcompat.app.AppCompatActivity;
 import android.content.Context;
 import android.hardware.SensorManager;
 import android.os.Bundle;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
@@ -38,7 +40,7 @@ public class MainActivity extends AppCompatActivity {
             Toast.makeText(getApplicationContext(), "server`s ip : " + serverIP, Toast.LENGTH_SHORT).show();
         }));
 
-        mTracker = new Tracker((SensorManager)getSystemService(Context.SENSOR_SERVICE));
+        mTracker = new Tracker((SensorManager) getSystemService(Context.SENSOR_SERVICE));
         // if mouse pointer location is changed, send packet.
         mTracker.setOnLocationChangeListener((x, y, flag) -> {
             ByteBuffer buf = ByteBuffer.allocate(2 * Integer.BYTES + 1);
@@ -50,8 +52,8 @@ public class MainActivity extends AppCompatActivity {
 
         // button touch listener (make flag)
         View.OnTouchListener onTouchListener = (v, event) -> {
-            Tracker.Flag currentFlag = (Tracker.Flag)v.getTag();
-            switch (event.getAction() ) {
+            Tracker.Flag currentFlag = (Tracker.Flag) v.getTag();
+            switch (event.getAction()) {
                 case MotionEvent.ACTION_DOWN:
                     mTracker.addFlag(currentFlag);
                     break;
@@ -84,6 +86,38 @@ public class MainActivity extends AppCompatActivity {
         // hold button up/down event
         mButtonHold.setTag(Tracker.Flag.HOLD);
         mButtonHold.setOnTouchListener(onTouchListener);
+
+    }
+
+    @Override
+    // set menu
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.main_manu, menu);
+        return true;
+    }
+    // menu select event
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        if (mTracker != null) {
+            mTracker.stopSensor();
+            switch (item.getItemId()) {
+                case R.id.menu_fast:
+                    mTracker.setInterval(SensorManager.SENSOR_DELAY_FASTEST);
+                    break;
+                case R.id.menu_normal:
+                    mTracker.setInterval(SensorManager.SENSOR_DELAY_GAME);
+                    break;
+                case R.id.menu_slow:
+                    mTracker.setInterval(SensorManager.SENSOR_DELAY_UI);
+                    break;
+                default:
+                    Toast.makeText(getApplicationContext(), "error : undefined menu id", Toast.LENGTH_SHORT).show();
+                    break;
+            }
+            mTracker.resumeSensor();
+        }
+
+        return super.onOptionsItemSelected(item);
     }
 
     public void onResume() {
@@ -97,4 +131,5 @@ public class MainActivity extends AppCompatActivity {
         mTracker.stopSensor();
         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
     }
+
 }

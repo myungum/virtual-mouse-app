@@ -32,14 +32,13 @@ public class Tracker {
     private Sensor mGyroSensor;
     private Sensor mGravitySensor;
     private OnLocationChangeListener onLocationChangeListener;
+    private int mInterval = SensorManager.SENSOR_DELAY_GAME; // default frequency
 
     public Tracker(SensorManager sensorManager) {
         mSensorManager = sensorManager;
         mGyroSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE_UNCALIBRATED);
         mGravitySensor = mSensorManager.getDefaultSensor(Sensor.TYPE_GRAVITY);
-
-        mSensorManager.registerListener(gyroListener, mGyroSensor, SensorManager.SENSOR_DELAY_GAME);
-        mSensorManager.registerListener(gravityListener, mGravitySensor, SensorManager.SENSOR_DELAY_GAME);
+        resumeSensor();
     }
 
     // make mouse status data
@@ -64,6 +63,10 @@ public class Tracker {
 
     public void setOnLocationChangeListener(OnLocationChangeListener onLocationChangeListener) {
         this.onLocationChangeListener = onLocationChangeListener;
+    }
+
+    public void setInterval(int interval) {
+        mInterval = interval;
     }
 
     // gyro sensor
@@ -100,8 +103,8 @@ public class Tracker {
     }
 
     public void resumeSensor() {
-        mSensorManager.registerListener(gyroListener, mGyroSensor, SensorManager.SENSOR_DELAY_GAME);
-        mSensorManager.registerListener(gravityListener, mGravitySensor, SensorManager.SENSOR_DELAY_GAME);
+        mSensorManager.registerListener(gyroListener, mGyroSensor, SensorManager.SENSOR_DELAY_FASTEST == mInterval ? SensorManager.SENSOR_DELAY_GAME : mInterval); // max frequency of gyro sensor is SENSOR_DELAY_GAME
+        mSensorManager.registerListener(gravityListener, mGravitySensor, mInterval);
     }
 
     // add flag (mouse down, key down...)
