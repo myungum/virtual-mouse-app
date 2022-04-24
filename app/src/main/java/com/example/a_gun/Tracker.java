@@ -25,6 +25,9 @@ public class Tracker {
     private int mFlag = 0x00;
 
     private Object mSensorValueLock = new Object();
+    private Object mLocationLock = new Object();
+    private int mPreMoveX, mPreMoveY;
+    private int mPreFlag;
     private float mGyroX, mGyroY, mGyroZ;
     private float mGravityX, mGravityZ;
     private final double WEIGHT = 70.0f; // mouse sensitivity
@@ -43,22 +46,33 @@ public class Tracker {
 
     // make mouse status data
     private void locationChange() {
-        double moveX, moveY ; // y+ is bottom, because left-top of screen is (0, 0)
+        int moveX, moveY;
+        int flag;
+        boolean changed = false;
 
         synchronized (mSensorValueLock) {
             final double scar = Math.sqrt(mGravityX * mGravityX + mGravityZ * mGravityZ); // gravity vector size on XZ-plane
             final double s = mGravityX / scar; // sin
             final double c = mGravityZ / scar; // cos
 
-            moveX = -mGyroZ * c - mGyroX * s; // x+ is right
-            moveY = mGyroZ * s - mGyroX * c; // y+ is bottom, because left-top of screen is (0, 0)
+            moveX = (int)(WEIGHT * (-mGyroZ * c - mGyroX * s)); // x+ is right
+            moveY = (int)(WEIGHT * ( mGyroZ * s - mGyroX * c)); // y+ is bottom, because left-top of screen is (0, 0)
+            flag = mFlag; // get value while avoiding race condition
         }
 
-        final int x = (int)(WEIGHT * moveX);
-        final int y = (int)(WEIGHT * moveY);
+        synchronized (mLocationLock) {
+            // don't make event when the location has not changed
+            if (moveX != mPreMoveX || moveY != mPreMoveY || flag != mPreFlag) {
+                mPreMoveX = moveX;
+                mPreMoveY = moveY;
+                mPreFlag = flag;
+                changed = true;
+            }
+        }
 
-        if (onLocationChangeListener != null)
-            onLocationChangeListener.onLocationChanged(x, y, (byte)mFlag);
+        // make event
+        if (changed && onLocationChangeListener != null)
+            onLocationChangeListener.onLocationChanged(moveX, moveY, (byte)mFlag);
     }
 
     public void setOnLocationChangeListener(OnLocationChangeListener onLocationChangeListener) {
@@ -112,6 +126,7 @@ public class Tracker {
         synchronized (mSensorValueLock) {
             mFlag |= flag.getValue();
         }
+        locationChange();
     }
 
     // remove flag (mouse up, key up...)
@@ -119,5 +134,6 @@ public class Tracker {
         synchronized (mSensorValueLock) {
             mFlag &= ~flag.getValue();
         }
+        locationChange();
     }
 }
