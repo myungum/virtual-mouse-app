@@ -7,7 +7,7 @@
 
 위 프로젝트와 마찬가지로 게임에서 사용 가능합니다.
 
-<img src="https://github.com/myungum/virtual-mouse-app/blob/client/img/prototype.jpg" width="30%">
+<img src="https://github.com/myungum/virtual-mouse-app/blob/client/img/img1.jpg" width="30%">
 
 ## 주의사항
 일부 프로그램에서 서버를 비정상 프로그램으로 인식할 수 있습니다(특히 온라인 게임).
@@ -27,12 +27,14 @@ Gyro sensor and gravity sensor are needed.
 
 LAN 내 서버 찾기 기능
 
+클라이언트-서버 통신 주기 설정 기능 (프레임? 주사율?)
+
 ### 구현할 기능
 클라이언트-서버 통신 동기화 (현재 UDP 패킷 무지성 난사 중) + 다른 환경에서 성능 테스트
-
-클라이언트-서버 통신 주기 설정 기능 (프레임? 주사율?)
 
 정확도 보정 및 한손 파지 UI 구현
 
 ## 참조
 G-건 프로젝트 : https://hackmd.io/oaTqnj61RCasSOSzaFw3Yw?view, https://www.youtube.com/watch?v=cRP3xnpOsM0
+
+[virtual-joystick-android](https://github.com/controlwear/virtual-joystick-android)
