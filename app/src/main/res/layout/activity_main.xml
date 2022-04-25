@@ -14,7 +14,7 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="0dp"
-            android:layout_weight="1"
+            android:layout_weight="2"
             android:orientation="horizontal">
 
             <Button
@@ -35,37 +35,26 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="0dp"
-            android:layout_weight="1"
+            android:layout_weight="3"
             android:orientation="horizontal">
 
-            <Button
-                android:id="@+id/btn_W"
-                android:layout_width="0dp"
+            <io.github.controlwear.virtual.joystick.android.JoystickView xmlns:custom="http://schemas.android.com/apk/res-auto"
+                android:id="@+id/joystick"
+                android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:layout_marginRight="150dp"
-                android:layout_weight="1"
-                android:text="W" />
+                custom:JV_backgroundColor="#1428A0"
+                custom:JV_borderColor="#00796B"
+                custom:JV_borderWidth="0dp"
+                custom:JV_buttonColor="#FFFFFF"
+                custom:JV_buttonSizeRatio="15%"
+                custom:JV_fixedCenter="false" />
+
         </LinearLayout>
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="0dp"
-            android:layout_weight="1"
-            android:orientation="horizontal">
-
-            <Button
-                android:id="@+id/btn_S"
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_marginRight="150dp"
-                android:layout_weight="1"
-                android:text="S" />
-        </LinearLayout>
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1"
+            android:layout_weight="2"
             android:orientation="horizontal">
 
             <Button
@@ -80,7 +69,7 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="0dp"
-            android:layout_weight="1"
+            android:layout_weight="2"
             android:orientation="horizontal">
 
             <Button

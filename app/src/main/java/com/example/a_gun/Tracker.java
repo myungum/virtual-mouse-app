@@ -14,9 +14,11 @@ public class Tracker {
         LEFT(0x01),
         RIGHT(0x02),
         W(0x04),
-        S(0x08),
-        TAB(0x10),
-        HOLD(0x20);
+        A(0x08),
+        S(0x10),
+        D(0x20),
+        TAB(0x40),
+        HOLD(0x80);
 
         private final int value;
         Flag(int value) { this.value = value; }
@@ -123,17 +125,44 @@ public class Tracker {
 
     // add flag (mouse down, key down...)
     public void addFlag(Flag flag) {
+        boolean changed = false;
         synchronized (mSensorValueLock) {
-            mFlag |= flag.getValue();
+            if ((mFlag & flag.getValue()) == 0) {
+                mFlag |= flag.getValue();
+                changed = true;
+            }
         }
-        locationChange();
+        if (changed) {
+            locationChange();
+        }
     }
 
     // remove flag (mouse up, key up...)
     public void removeFlag(Flag flag) {
+        boolean changed = false;
         synchronized (mSensorValueLock) {
-            mFlag &= ~flag.getValue();
+            if ((mFlag & flag.getValue()) > 0) {
+                mFlag &= ~flag.getValue();
+                changed = true;
+            }
         }
-        locationChange();
+        if (changed) {
+            locationChange();
+        }
+    }
+
+    // add and remove flag
+    public void setFlag(int aFlag, int rFlag) {
+        boolean changed = false;
+        synchronized (mSensorValueLock) {
+            int newFlag = (mFlag | aFlag) & ~rFlag;
+            if (newFlag != mFlag) {
+                mFlag = newFlag;
+                changed = true;
+            }
+        }
+        if (changed) {
+            locationChange();
+        }
     }
 }

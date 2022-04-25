@@ -5,6 +5,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import android.content.Context;
 import android.hardware.SensorManager;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.MotionEvent;
@@ -15,8 +16,11 @@ import android.widget.Toast;
 
 import java.nio.ByteBuffer;
 
+import io.github.controlwear.virtual.joystick.android.JoystickView;
+
 public class MainActivity extends AppCompatActivity {
-    private Button mButtonLeft, mButtonRight, mButtonW, mButtonS, mButtonTab, mButtonHold;
+    private Button mButtonLeft, mButtonRight, mButtonTab, mButtonHold;
+    private JoystickView mJoyStick;
     private final double WEIGHT = 70.0f; // mouse sensitivity
 
     private UdpClient mClient;
@@ -29,8 +33,7 @@ public class MainActivity extends AppCompatActivity {
 
         mButtonLeft = findViewById(R.id.btn_left);
         mButtonRight = findViewById(R.id.btn_right);
-        mButtonW = findViewById(R.id.btn_W);
-        mButtonS = findViewById(R.id.btn_S);
+        mJoyStick = findViewById(R.id.joystick);
         mButtonTab = findViewById(R.id.btn_Tab);
         mButtonHold = findViewById(R.id.btn_hold);
 
@@ -71,14 +74,6 @@ public class MainActivity extends AppCompatActivity {
         mButtonRight.setTag(Tracker.Flag.RIGHT);
         mButtonRight.setOnTouchListener(onTouchListener);
 
-        // w button up/down event
-        mButtonW.setTag(Tracker.Flag.W);
-        mButtonW.setOnTouchListener(onTouchListener);
-
-        // s button up/down event
-        mButtonS.setTag(Tracker.Flag.S);
-        mButtonS.setOnTouchListener(onTouchListener);
-
         // tab button up/down event
         mButtonTab.setTag(Tracker.Flag.TAB);
         mButtonTab.setOnTouchListener(onTouchListener);
@@ -87,6 +82,36 @@ public class MainActivity extends AppCompatActivity {
         mButtonHold.setTag(Tracker.Flag.HOLD);
         mButtonHold.setOnTouchListener(onTouchListener);
 
+        // joystick(move) event
+        mJoyStick.setOnMoveListener((angle, strength) -> {
+            int aFlag = 0;
+            int rFlag = Tracker.Flag.W.getValue() |
+                    Tracker.Flag.A.getValue() |
+                    Tracker.Flag.S.getValue() |
+                    Tracker.Flag.D.getValue();
+            if (strength < 20) {
+                ;
+            }
+            // w
+            else if (45 < angle && angle <= 45 + 90) {
+                aFlag = Tracker.Flag.W.getValue();
+            }
+            // a
+            else if (45 + 90 < angle && angle <= 45 + 180) {
+                aFlag = Tracker.Flag.A.getValue();
+            }
+            // s
+            else if (45 + 180 < angle && angle <= 45 + 270) {
+                aFlag = Tracker.Flag.S.getValue();
+            }
+            // d
+            else {
+                aFlag = Tracker.Flag.D.getValue();
+            }
+            mTracker.setFlag(aFlag, rFlag ^ aFlag);
+
+            Log.i("joystick", "angle : " +angle + ", strength : " + strength);
+        });
     }
 
     @Override
