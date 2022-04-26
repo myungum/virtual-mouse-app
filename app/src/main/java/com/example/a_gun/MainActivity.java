@@ -19,8 +19,8 @@ import java.nio.ByteBuffer;
 import io.github.controlwear.virtual.joystick.android.JoystickView;
 
 public class MainActivity extends AppCompatActivity {
-    private Button mButtonLeft, mButtonRight, mButtonTab, mButtonHold;
-    private JoystickView mJoyStick;
+    private Button mButtonTab, mButtonHold;
+    private JoystickView mJoystickMove, mJoystickShot;
     private final double WEIGHT = 70.0f; // mouse sensitivity
 
     private UdpClient mClient;
@@ -31,9 +31,8 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        mButtonLeft = findViewById(R.id.btn_left);
-        mButtonRight = findViewById(R.id.btn_right);
-        mJoyStick = findViewById(R.id.joystick);
+        mJoystickShot = findViewById(R.id.joystick_shot);
+        mJoystickMove = findViewById(R.id.joystick_move);
         mButtonTab = findViewById(R.id.btn_Tab);
         mButtonHold = findViewById(R.id.btn_hold);
 
@@ -66,13 +65,6 @@ public class MainActivity extends AppCompatActivity {
             }
             return true;
         };
-        // left button up/down event
-        mButtonLeft.setTag(Tracker.Flag.LEFT);
-        mButtonLeft.setOnTouchListener(onTouchListener);
-
-        // right button up/down event
-        mButtonRight.setTag(Tracker.Flag.RIGHT);
-        mButtonRight.setOnTouchListener(onTouchListener);
 
         // tab button up/down event
         mButtonTab.setTag(Tracker.Flag.TAB);
@@ -82,8 +74,29 @@ public class MainActivity extends AppCompatActivity {
         mButtonHold.setTag(Tracker.Flag.HOLD);
         mButtonHold.setOnTouchListener(onTouchListener);
 
+        // joystick(shot) event
+        mJoystickShot.setOnTouchListener((v, event) -> {
+            switch (event.getAction()) {
+                case MotionEvent.ACTION_DOWN:
+                    mTracker.addFlag(Tracker.Flag.RIGHT);
+                    break;
+                case MotionEvent.ACTION_UP:
+                    mTracker.removeFlag(Tracker.Flag.RIGHT);
+                    break;
+            }
+            return false;
+        });
+        mJoystickShot.setOnMoveListener((angle, strength) -> {
+            if (strength >= 20 && 270 - 46 <= angle && angle <= 270 + 45) {
+                mTracker.addFlag(Tracker.Flag.LEFT);
+            }
+            else {
+                mTracker.removeFlag(Tracker.Flag.LEFT);
+            }
+        });
+
         // joystick(move) event
-        mJoyStick.setOnMoveListener((angle, strength) -> {
+        mJoystickMove.setOnMoveListener((angle, strength) -> {
             int aFlag = 0;
             int rFlag = Tracker.Flag.W.getValue() |
                     Tracker.Flag.A.getValue() |
