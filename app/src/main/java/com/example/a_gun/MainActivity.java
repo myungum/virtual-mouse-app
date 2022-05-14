@@ -1,11 +1,13 @@
 package com.example.a_gun;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.view.GestureDetectorCompat;
 
 import android.content.Context;
 import android.hardware.SensorManager;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.GestureDetector;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.MotionEvent;
@@ -19,9 +21,7 @@ import java.nio.ByteBuffer;
 import io.github.controlwear.virtual.joystick.android.JoystickView;
 
 public class MainActivity extends AppCompatActivity {
-    private Button mButtonTab, mButtonHold;
-    private JoystickView mJoystickMove, mJoystickShot;
-    private final double WEIGHT = 70.0f; // mouse sensitivity
+    private Button mButton;
 
     private UdpClient mClient;
     private Tracker mTracker;
@@ -30,12 +30,6 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
-        mJoystickShot = findViewById(R.id.joystick_shot);
-        mJoystickMove = findViewById(R.id.joystick_move);
-        mButtonTab = findViewById(R.id.btn_Tab);
-        mButtonHold = findViewById(R.id.btn_hold);
-
         mClient = new UdpClient();
         mClient.resumeServerFinder(); // start finding server in LAN
         mClient.setOnFindServerListener(serverIP -> runOnUiThread(() -> {
@@ -52,78 +46,18 @@ public class MainActivity extends AppCompatActivity {
             mClient.send(buf.array());
         });
 
-        // button touch listener (make flag)
-        View.OnTouchListener onTouchListener = (v, event) -> {
-            Tracker.Flag currentFlag = (Tracker.Flag) v.getTag();
+        mButton = (Button)findViewById(R.id.button);
+        mButton.setOnTouchListener((v, event) -> {
             switch (event.getAction()) {
                 case MotionEvent.ACTION_DOWN:
-                    mTracker.addFlag(currentFlag);
+                    mTracker.addFlag(Tracker.Flag.LEFT);
                     break;
                 case MotionEvent.ACTION_UP:
-                    mTracker.removeFlag(currentFlag);
+                    mTracker.removeFlag(Tracker.Flag.LEFT);
                     break;
             }
-            return true;
-        };
 
-        // tab button up/down event
-        mButtonTab.setTag(Tracker.Flag.TAB);
-        mButtonTab.setOnTouchListener(onTouchListener);
-
-        // hold button up/down event
-        mButtonHold.setTag(Tracker.Flag.HOLD);
-        mButtonHold.setOnTouchListener(onTouchListener);
-
-        // joystick(shot) event
-        mJoystickShot.setOnTouchListener((v, event) -> {
-            switch (event.getAction()) {
-                case MotionEvent.ACTION_DOWN:
-                    mTracker.addFlag(Tracker.Flag.RIGHT);
-                    break;
-                case MotionEvent.ACTION_UP:
-                    mTracker.removeFlag(Tracker.Flag.RIGHT);
-                    break;
-            }
             return false;
-        });
-        mJoystickShot.setOnMoveListener((angle, strength) -> {
-            if (strength >= 20 && 270 - 46 <= angle && angle <= 270 + 45) {
-                mTracker.addFlag(Tracker.Flag.LEFT);
-            }
-            else {
-                mTracker.removeFlag(Tracker.Flag.LEFT);
-            }
-        });
-
-        // joystick(move) event
-        mJoystickMove.setOnMoveListener((angle, strength) -> {
-            int aFlag = 0;
-            int rFlag = Tracker.Flag.W.getValue() |
-                    Tracker.Flag.A.getValue() |
-                    Tracker.Flag.S.getValue() |
-                    Tracker.Flag.D.getValue();
-            if (strength < 20) {
-                ;
-            }
-            // w
-            else if (45 < angle && angle <= 45 + 90) {
-                aFlag = Tracker.Flag.W.getValue();
-            }
-            // a
-            else if (45 + 90 < angle && angle <= 45 + 180) {
-                aFlag = Tracker.Flag.A.getValue();
-            }
-            // s
-            else if (45 + 180 < angle && angle <= 45 + 270) {
-                aFlag = Tracker.Flag.S.getValue();
-            }
-            // d
-            else {
-                aFlag = Tracker.Flag.D.getValue();
-            }
-            mTracker.setFlag(aFlag, rFlag ^ aFlag);
-
-            Log.i("joystick", "angle : " +angle + ", strength : " + strength);
         });
     }
 

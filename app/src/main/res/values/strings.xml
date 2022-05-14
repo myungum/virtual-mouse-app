@@ -3,4 +3,5 @@
     <string name="fast">빠르게</string>
     <string name="normal">보통 (기본값)</string>
     <string name="slow">느리게</string>
+    <string name="btn_text"> </string>
 </resources>

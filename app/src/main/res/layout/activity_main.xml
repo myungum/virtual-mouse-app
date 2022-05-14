@@ -9,76 +9,15 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:orientation="vertical">
+        android:orientation="vertical" >
 
-        <LinearLayout
+        <Button
+            android:id="@+id/button"
             android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="3"
-            android:orientation="horizontal">
-
-            <io.github.controlwear.virtual.joystick.android.JoystickView
-                android:id="@+id/joystick_move"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                app:JV_backgroundColor="#1428A0"
-                app:JV_borderColor="#00796B"
-                app:JV_borderWidth="0dp"
-                app:JV_buttonColor="#FFFFFF"
-                app:JV_buttonSizeRatio="15%"
-                app:JV_fixedCenter="false" />
-
-        </LinearLayout>
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="2"
-            android:orientation="horizontal">
-
-            <Button
-                android:id="@+id/btn_Tab"
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_marginRight="150dp"
-                android:layout_weight="1"
-                android:text="Tab" />
-        </LinearLayout>
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="2"
-            android:orientation="horizontal">
-
-        </LinearLayout>
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="3"
-            android:orientation="horizontal">
-
-            <io.github.controlwear.virtual.joystick.android.JoystickView
-                android:id="@+id/joystick_shot"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                app:JV_backgroundColor="#1428A0"
-                app:JV_borderColor="#00796B"
-                app:JV_borderWidth="0dp"
-                app:JV_buttonColor="#FFFFFF"
-                app:JV_buttonSizeRatio="15%"
-                app:JV_fixedCenter="false" />
-
-            <Button
-                android:id="@+id/btn_hold"
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_marginRight="0dp"
-                android:layout_weight="1"
-                android:text="Hold" />
-        </LinearLayout>
-
+            android:layout_height="match_parent"
+            android:layout_margin="50dp"
+            android:background="#1428A0"
+            android:text="@string/btn_text" />
     </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>
