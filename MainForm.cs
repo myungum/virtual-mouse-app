@@ -17,17 +17,13 @@ namespace agun_server
         private readonly int MOUSEEVENTF_LEFTUP = 0x04;
         private readonly int MOUSEEVENTF_RIGHTDOWN = 0x08;
         private readonly int MOUSEEVENTF_RIGHTUP = 0x10;
-
+        private readonly int MOUSEEVENTF_WHEEL = 0x800; /*wheel button rolled */
         private readonly int MAIN_PORT = 20415;
         private readonly int REPLY_PORT = 20416;
 
         private bool left_down = false;
         private bool right_down = false;
-        private bool w_down = false;
-        private bool s_down = false;
-        private bool tab_down = false;
         private bool hold_down = false;
-
         Thread mainThread;
         Thread replyThread;
         public MainForm()
@@ -53,42 +49,30 @@ namespace agun_server
                     {
                         Array.Reverse(data, 0, 4);
                         Array.Reverse(data, 4, 4);
+                        Array.Reverse(data, 8, 4);
                     }
                     int x = BitConverter.ToInt32(data, 0);
                     int y = BitConverter.ToInt32(data, 4);
+                    int scroll = BitConverter.ToInt32(data, 8);
 
-                    hold_down = (data[8] & 0x20) > 0;
+                    hold_down = (data[12] & 0x80) > 0;
 
                     if (!hold_down)
                     {
                         // Check mouse move delta(variance)
-                        mouse_event(MOUSEEVENTF_MOVE, x, y, 0, 0);
+                        mouse_event(MOUSEEVENTF_MOVE | MOUSEEVENTF_WHEEL, x, y, scroll, 0);
+
                         // Check mouse left button
-                        if (left_down != (left_down = ((data[8] & 0x01) > 0)))
+                        if (left_down != (left_down = ((data[12] & 0x01) > 0)))
                         {
                             mouse_event(left_down ? MOUSEEVENTF_LEFTDOWN : MOUSEEVENTF_LEFTUP, Cursor.Position.X, Cursor.Position.Y, 0, 0);
                         }
                         // Check mouse right button
-                        if (right_down != (right_down = ((data[8] & 0x02) > 0)))
+                        if (right_down != (right_down = ((data[12] & 0x02) > 0)))
                         {
                             mouse_event(right_down ? MOUSEEVENTF_RIGHTDOWN : MOUSEEVENTF_RIGHTUP, Cursor.Position.X, Cursor.Position.Y, 0, 0);
                         }
-
-                        // Check keyboard w button
-                        if (w_down != (w_down = ((data[8] & 0x04) > 0)))
-                        {
-                            keyboard.Send(Keyboard.ScanCodeShort.KEY_W, w_down ? 0 : Keyboard.KEYEVENTF.KEYUP);
-                        }
-                        // Check keyboard s button
-                        if (s_down != (s_down = ((data[8] & 0x08) > 0)))
-                        {
-                            keyboard.Send(Keyboard.ScanCodeShort.KEY_S, s_down ? 0 : Keyboard.KEYEVENTF.KEYUP);
-                        }
-                        // Check keyboard tab button
-                        if (tab_down != (tab_down = ((data[8] & 0x10) > 0)))
-                        {
-                            keyboard.Send(Keyboard.ScanCodeShort.TAB, tab_down ? 0 : Keyboard.KEYEVENTF.KEYUP);
-                        }
+                        
                     }
                 }
             });
