@@ -59,20 +59,22 @@ namespace agun_server
 
                     if (!hold_down)
                     {
-                        // Check mouse move delta(variance)
-                        mouse_event(MOUSEEVENTF_MOVE | MOUSEEVENTF_WHEEL, x, y, scroll, 0);
+                        int flag = 0;
 
                         // Check mouse left button
                         if (left_down != (left_down = ((data[12] & 0x01) > 0)))
                         {
-                            mouse_event(left_down ? MOUSEEVENTF_LEFTDOWN : MOUSEEVENTF_LEFTUP, Cursor.Position.X, Cursor.Position.Y, 0, 0);
+                            flag |= (left_down ? MOUSEEVENTF_LEFTDOWN : MOUSEEVENTF_LEFTUP);
                         }
+
                         // Check mouse right button
                         if (right_down != (right_down = ((data[12] & 0x02) > 0)))
                         {
-                            mouse_event(right_down ? MOUSEEVENTF_RIGHTDOWN : MOUSEEVENTF_RIGHTUP, Cursor.Position.X, Cursor.Position.Y, 0, 0);
+                            flag |= (right_down ? MOUSEEVENTF_RIGHTDOWN : MOUSEEVENTF_RIGHTUP);
                         }
-                        
+
+                        // mouse click, move, wheelup/down
+                        mouse_event(flag | MOUSEEVENTF_MOVE | MOUSEEVENTF_WHEEL, x, y, scroll, 0);
                     }
                 }
             });
