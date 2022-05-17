@@ -38,26 +38,49 @@ public class MainActivity extends AppCompatActivity {
 
         mTracker = new Tracker((SensorManager) getSystemService(Context.SENSOR_SERVICE));
         // if mouse pointer location is changed, send packet.
-        mTracker.setOnLocationChangeListener((x, y, flag) -> {
-            ByteBuffer buf = ByteBuffer.allocate(2 * Integer.BYTES + 1);
+        mTracker.setOnMouseStatusChangeListener((x, y, scroll, flag) -> {
+            ByteBuffer buf = ByteBuffer.allocate(3 * Integer.BYTES + 1);
             buf.putInt(x);
             buf.putInt(y);
+            buf.putInt(scroll);
             buf.put(flag);
             mClient.send(buf.array());
         });
 
         mButton = (Button)findViewById(R.id.button);
-        mButton.setOnTouchListener((v, event) -> {
-            switch (event.getAction()) {
-                case MotionEvent.ACTION_DOWN:
+        mButton.setOnTouchListener(new OnGestureListener(this) {
+            @Override
+            public void onActionUp() {
+                mTracker.setScroll(0);
+                // if gesture is scrolling, cancel left click
+                if (!isScrolling) {
                     mTracker.addFlag(Tracker.Flag.LEFT);
-                    break;
-                case MotionEvent.ACTION_UP:
                     mTracker.removeFlag(Tracker.Flag.LEFT);
-                    break;
+                }
+                else {
+                    isScrolling = false;
+                }
             }
 
-            return false;
+            @Override
+            public void onSwipeLeft() {
+                Log.i("OnGestureListener", "onSwipeLeft");
+
+            }
+            @Override
+            public void onSwipeRight() {
+                Log.i("OnGestureListener", "onSwipeRight");
+            }
+
+            // page scroll
+            @Override
+            public void onScrollUpDown(float distance) {
+                mTracker.setScroll(-distance);
+                if (!isScrolling) {
+                    isScrolling = true;
+                }
+                Log.i("OnGestureListener", "onScrollUpDown : " + distance);
+            }
         });
     }
 

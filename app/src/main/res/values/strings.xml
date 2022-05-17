@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">a_gun</string>
+    <string name="app_name">virtual mouse</string>
     <string name="fast">빠르게</string>
     <string name="normal">보통 (기본값)</string>
     <string name="slow">느리게</string>

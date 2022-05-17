@@ -6,19 +6,13 @@ import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 
 public class Tracker {
-    interface OnLocationChangeListener {
-        void onLocationChanged(int x, int y, byte flag);
+    interface OnMouseStatusChangeListener {
+        void onMouseStatusChanged(int x, int y, int scroll, byte flag);
     }
 
     public enum Flag {
         LEFT(0x01),
-        RIGHT(0x02),
-        W(0x04),
-        A(0x08),
-        S(0x10),
-        D(0x20),
-        TAB(0x40),
-        HOLD(0x80);
+        RIGHT(0x02);
 
         private final int value;
         Flag(int value) { this.value = value; }
@@ -28,6 +22,7 @@ public class Tracker {
 
     private Object mSensorValueLock = new Object();
     private Object mLocationLock = new Object();
+    private int mScroll;
     private int mPreMoveX, mPreMoveY;
     private int mPreFlag;
     private float mGyroX, mGyroY, mGyroZ;
@@ -36,7 +31,7 @@ public class Tracker {
     private SensorManager mSensorManager;
     private Sensor mGyroSensor;
     private Sensor mGravitySensor;
-    private OnLocationChangeListener onLocationChangeListener;
+    private OnMouseStatusChangeListener onMouseStatusChangeListener;
     private int mInterval = SensorManager.SENSOR_DELAY_GAME; // default frequency
 
     public Tracker(SensorManager sensorManager) {
@@ -72,13 +67,16 @@ public class Tracker {
             }
         }
 
+        if (mScroll != 0)
+            changed = true;
+
         // make event
-        if (changed && onLocationChangeListener != null)
-            onLocationChangeListener.onLocationChanged(moveX, moveY, (byte)mFlag);
+        if (changed && onMouseStatusChangeListener != null)
+            onMouseStatusChangeListener.onMouseStatusChanged(moveX, moveY, mScroll, (byte)mFlag);
     }
 
-    public void setOnLocationChangeListener(OnLocationChangeListener onLocationChangeListener) {
-        this.onLocationChangeListener = onLocationChangeListener;
+    public void setOnMouseStatusChangeListener(OnMouseStatusChangeListener onMouseStatusChangeListener) {
+        this.onMouseStatusChangeListener = onMouseStatusChangeListener;
     }
 
     public void setInterval(int interval) {
@@ -121,6 +119,11 @@ public class Tracker {
     public void resumeSensor() {
         mSensorManager.registerListener(gyroListener, mGyroSensor, SensorManager.SENSOR_DELAY_FASTEST == mInterval ? SensorManager.SENSOR_DELAY_GAME : mInterval); // max frequency of gyro sensor is SENSOR_DELAY_GAME
         mSensorManager.registerListener(gravityListener, mGravitySensor, mInterval);
+    }
+
+    public void setScroll(float scroll) {
+        mScroll = (int) scroll;
+        locationChange();
     }
 
     // add flag (mouse down, key down...)
