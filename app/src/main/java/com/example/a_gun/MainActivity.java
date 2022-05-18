@@ -64,12 +64,14 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void onSwipeLeft() {
-                Log.i("OnGestureListener", "onSwipeLeft");
+                mTracker.addFlag(Tracker.Flag.FORWARD);
+                mTracker.removeFlag(Tracker.Flag.FORWARD);
 
             }
             @Override
             public void onSwipeRight() {
-                Log.i("OnGestureListener", "onSwipeRight");
+                mTracker.addFlag(Tracker.Flag.BACK);
+                mTracker.removeFlag(Tracker.Flag.BACK);
             }
 
             // page scroll
@@ -79,7 +81,6 @@ public class MainActivity extends AppCompatActivity {
                 if (!isScrolling) {
                     isScrolling = true;
                 }
-                Log.i("OnGestureListener", "onScrollUpDown : " + distance);
             }
         });
     }

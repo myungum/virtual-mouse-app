@@ -12,7 +12,9 @@ public class Tracker {
 
     public enum Flag {
         LEFT(0x01),
-        RIGHT(0x02);
+        RIGHT(0x02),
+        BACK(0x04),
+        FORWARD(0x08);
 
         private final int value;
         Flag(int value) { this.value = value; }
