@@ -17,6 +17,9 @@ namespace agun_server
         private readonly int MOUSEEVENTF_LEFTUP = 0x04;
         private readonly int MOUSEEVENTF_RIGHTDOWN = 0x08;
         private readonly int MOUSEEVENTF_RIGHTUP = 0x10;
+        private readonly int MOUSEEVENTF_XDOWN = 0x80;
+        private readonly int MOUSEEVENTF_XUP = 0x100;
+
         private readonly int MOUSEEVENTF_WHEEL = 0x800; /*wheel button rolled */
         private readonly int MAIN_PORT = 20415;
         private readonly int REPLY_PORT = 20416;
@@ -24,6 +27,9 @@ namespace agun_server
         private bool left_down = false;
         private bool right_down = false;
         private bool hold_down = false;
+        private bool back_down = false;
+        private bool forward_down = false;
+
         Thread mainThread;
         Thread replyThread;
         public MainForm()
@@ -75,6 +81,20 @@ namespace agun_server
 
                         // mouse click, move, wheelup/down
                         mouse_event(flag | MOUSEEVENTF_MOVE | MOUSEEVENTF_WHEEL, x, y, scroll, 0);
+
+                        // mouse xbutton : go back 
+                        if (back_down != (back_down = ((data[12] & 0x04) > 0)))
+                        {
+                            Console.WriteLine("back");
+                            mouse_event(back_down ? MOUSEEVENTF_XDOWN : MOUSEEVENTF_XUP, 0, 0, 0x0001, 0);
+                        }
+
+                        // mouse xbutton : go forward
+                        if (forward_down != (forward_down = ((data[12] & 0x08) > 0)))
+                        {
+                            Console.WriteLine("back");
+                            mouse_event(forward_down ? MOUSEEVENTF_XDOWN : MOUSEEVENTF_XUP, 0, 0, 0x0002, 0);
+                        }
                     }
                 }
             });
