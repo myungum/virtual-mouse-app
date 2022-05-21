@@ -1,6 +1,7 @@
 package com.example.a_gun;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.constraintlayout.widget.ConstraintSet;
 import androidx.core.view.GestureDetectorCompat;
 
 import android.content.Context;
@@ -50,15 +51,39 @@ public class MainActivity extends AppCompatActivity {
         mButton = (Button)findViewById(R.id.button);
         mButton.setOnTouchListener(new OnGestureListener(this) {
             @Override
-            public void onActionUp() {
-                mTracker.setScroll(0);
-                // if gesture is scrolling, cancel left click
-                if (!isScrolling) {
-                    mTracker.addFlag(Tracker.Flag.LEFT);
-                    mTracker.removeFlag(Tracker.Flag.LEFT);
-                }
-                else {
-                    isScrolling = false;
+            public void onTouch(MotionEvent event) {
+                switch (event.getAction()) {
+                    case MotionEvent.ACTION_UP:
+                        switch (event.getPointerCount()) {
+                            case 1:
+                                // if gesture is scrolling, cancel left click
+                                if (!isScrolling) {
+                                    mTracker.addFlag(Tracker.Flag.LEFT);
+                                    mTracker.removeFlag(Tracker.Flag.LEFT);
+                                } else {
+                                    isScrolling = false;
+                                }
+                                break;
+                            case 2:
+                                break;
+                            case 3:
+                                break;
+                        }
+
+
+                        break;
+                    case MotionEvent.ACTION_DOWN:
+                        mTracker.setScrollSpeed(0);
+                        switch (event.getPointerCount()) {
+                            case 1:
+
+                                break;
+                            case 2:
+                                break;
+                            case 3:
+                                break;
+                        }
+                        break;
                 }
             }
 
@@ -76,7 +101,8 @@ public class MainActivity extends AppCompatActivity {
             // page scroll
             @Override
             public void onScrollUpDown(float distance) {
-                mTracker.setScroll(-distance);
+                mTracker.setScrollSpeed(-distance);
+                Log.i("Tracker", "distance : " + distance);
             }
         });
     }

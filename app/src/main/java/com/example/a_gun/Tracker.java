@@ -4,6 +4,7 @@ import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
+import android.util.Log;
 
 public class Tracker {
     interface OnMouseStatusChangeListener {
@@ -24,12 +25,21 @@ public class Tracker {
 
     private Object mSensorValueLock = new Object();
     private Object mLocationLock = new Object();
-    private int mScroll;
-    private int mPreMoveX, mPreMoveY;
-    private int mPreFlag;
+    private Object mFlagLock = new Object();
+    private Object mScrollLock = new Object();
+    private int mScrollSpeed;
+
     private float mGyroX, mGyroY, mGyroZ;
     private float mGravityX, mGravityZ;
-    private final double WEIGHT = 70.0f; // mouse sensitivity
+    private double mMouseSensitivity = 70.0f; // mouse sensitivity
+    private double mScrollSensitivity = 1.4f; // scroll sensitivity
+    private double mScrollInertia = 50;
+
+    private int mPreMoveX, mPreMoveY;
+    private int mPreFlag;
+    private int mPreScrollSpeed;
+    private long mLastUpdateTime;
+
     private SensorManager mSensorManager;
     private Sensor mGyroSensor;
     private Sensor mGravitySensor;
@@ -43,10 +53,17 @@ public class Tracker {
         resumeSensor();
     }
 
+    public void setMouseSensitivity(double mouseSensitivity) {
+        mMouseSensitivity = mouseSensitivity;
+    }
+
+    public void setScrollSensitivity(double scrollSensitivity) {
+        mScrollSensitivity = scrollSensitivity;
+    }
+
     // make mouse status data
     private void locationChange() {
         int moveX, moveY;
-        int flag;
         boolean changed = false;
 
         synchronized (mSensorValueLock) {
@@ -54,27 +71,73 @@ public class Tracker {
             final double s = mGravityX / scar; // sin
             final double c = mGravityZ / scar; // cos
 
-            moveX = (int)(WEIGHT * (-mGyroZ * c - mGyroX * s)); // x+ is right
-            moveY = (int)(WEIGHT * ( mGyroZ * s - mGyroX * c)); // y+ is bottom, because left-top of screen is (0, 0)
-            flag = mFlag; // get value while avoiding race condition
+            moveX = (int)(mMouseSensitivity * (-mGyroZ * c - mGyroX * s)); // x+ is right
+            moveY = (int)(mMouseSensitivity * ( mGyroZ * s - mGyroX * c)); // y+ is bottom, because left-top of screen is (0, 0)
+
         }
 
         synchronized (mLocationLock) {
-            // don't make event when the location has not changed
-            if (moveX != mPreMoveX || moveY != mPreMoveY || flag != mPreFlag) {
+            // make event when the location has changed
+            if (moveX != mPreMoveX || moveY != mPreMoveY) {
                 mPreMoveX = moveX;
                 mPreMoveY = moveY;
+                changed = true;
+            }
+        }
+
+        int scroll = 0;
+        synchronized (mScrollLock) {
+            long currentTime = System.currentTimeMillis();
+
+            // make event when the mouse has scrolled
+            Log.i("Tracker", "scroll : " + mScrollSpeed);
+
+            if (mScrollSpeed != 0) {
+                // set distance
+                if (mPreScrollSpeed != 0) {
+                    // distance = velocity * time
+                    scroll = (int)(((currentTime - mLastUpdateTime) * mScrollSpeed) / 20);
+
+
+                }
+                else {
+                    scroll = mScrollSpeed;
+                }
+                mPreScrollSpeed = mScrollSpeed;
+
+                // decelerate
+                if (scroll > 0) {
+                    mScrollSpeed -= Math.ceil((double) scroll / mScrollInertia);
+                }
+                else {
+                    mScrollSpeed += Math.ceil((double) -scroll / mScrollInertia);
+                }
+                changed = true;
+            }
+            else{
+                mPreScrollSpeed = 0;
+            }
+            mLastUpdateTime = currentTime;
+        }
+
+        int flag = 0;
+        synchronized (mFlagLock) {
+            flag = mFlag;
+            // make event when the flag has changed
+            if (flag != mPreFlag) {
                 mPreFlag = flag;
                 changed = true;
             }
         }
 
-        if (mScroll != 0)
-            changed = true;
-
         // make event
-        if (changed && onMouseStatusChangeListener != null)
-            onMouseStatusChangeListener.onMouseStatusChanged(moveX, moveY, mScroll, (byte)mFlag);
+        if (changed && onMouseStatusChangeListener != null) {
+            onMouseStatusChangeListener.onMouseStatusChanged(moveX, moveY, scroll, (byte) flag);
+        }
+
+        if (scroll > 0) {
+            locationChange();
+        }
     }
 
     public void setOnMouseStatusChangeListener(OnMouseStatusChangeListener onMouseStatusChangeListener) {
@@ -123,15 +186,18 @@ public class Tracker {
         mSensorManager.registerListener(gravityListener, mGravitySensor, mInterval);
     }
 
-    public void setScroll(float scroll) {
-        mScroll = (int) scroll;
+    // set scroll speed
+    public void setScrollSpeed(float scroll) {
+        synchronized (mScrollLock) {
+            mScrollSpeed = (int) (mScrollSensitivity * scroll);
+        }
         locationChange();
     }
 
     // add flag (mouse down, key down...)
     public void addFlag(Flag flag) {
         boolean changed = false;
-        synchronized (mSensorValueLock) {
+        synchronized (mFlagLock) {
             if ((mFlag & flag.getValue()) == 0) {
                 mFlag |= flag.getValue();
                 changed = true;
@@ -145,7 +211,7 @@ public class Tracker {
     // remove flag (mouse up, key up...)
     public void removeFlag(Flag flag) {
         boolean changed = false;
-        synchronized (mSensorValueLock) {
+        synchronized (mFlagLock) {
             if ((mFlag & flag.getValue()) > 0) {
                 mFlag &= ~flag.getValue();
                 changed = true;
@@ -159,7 +225,7 @@ public class Tracker {
     // add and remove flag
     public void setFlag(int aFlag, int rFlag) {
         boolean changed = false;
-        synchronized (mSensorValueLock) {
+        synchronized (mFlagLock) {
             int newFlag = (mFlag | aFlag) & ~rFlag;
             if (newFlag != mFlag) {
                 mFlag = newFlag;

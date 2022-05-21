@@ -26,14 +26,12 @@ public class OnGestureListener implements View.OnTouchListener {
 
     }
 
-    public void onActionUp() {
+    public void onTouch(MotionEvent event) {
 
     }
 
     public boolean onTouch(View v, MotionEvent event) {
-        if (event.getAction() == MotionEvent.ACTION_UP) {
-            onActionUp();
-        }
+        onTouch(event);
 
         return gestureDetector.onTouchEvent(event);
     }
