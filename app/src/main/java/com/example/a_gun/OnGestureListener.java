@@ -64,6 +64,10 @@ public class OnGestureListener implements View.OnTouchListener {
 
         @Override
         public boolean onScroll(MotionEvent e1, MotionEvent e2, float distanceX, float distanceY) {
+            if (!isScrolling) {
+                isScrolling = true;
+            }
+
             if (Math.abs(distanceY) > Math.abs(distanceX) && Math.abs(distanceY) > SCROLL_DISTANCE_THRESHOLD) {
                 onScrollUpDown(distanceY);
                 return true;

@@ -64,23 +64,19 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void onSwipeLeft() {
-                mTracker.addFlag(Tracker.Flag.FORWARD);
-                mTracker.removeFlag(Tracker.Flag.FORWARD);
-
+                mTracker.addFlag(Tracker.Flag.BACK);
+                mTracker.removeFlag(Tracker.Flag.BACK);
             }
             @Override
             public void onSwipeRight() {
-                mTracker.addFlag(Tracker.Flag.BACK);
-                mTracker.removeFlag(Tracker.Flag.BACK);
+                mTracker.addFlag(Tracker.Flag.FORWARD);
+                mTracker.removeFlag(Tracker.Flag.FORWARD);
             }
 
             // page scroll
             @Override
             public void onScrollUpDown(float distance) {
                 mTracker.setScroll(-distance);
-                if (!isScrolling) {
-                    isScrolling = true;
-                }
             }
         });
     }
