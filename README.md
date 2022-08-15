@@ -3,6 +3,8 @@
 
 기존 어플들과 차이점으로 Y축(보통 스마트폰을 바라볼때 위쪽방향) 회전을 고려해서 레이저 포인터와 같이 자연스러운 움직임을 구현했습니다.
 
+<img src="https://github.com/myungum/virtual-mouse-app/blob/client/img/GTA5.gif" width="50%">
+
 대부분의 계산 공식과 아이디어는 [G-건 프로젝트](https://hackmd.io/oaTqnj61RCasSOSzaFw3Yw?view)에서 얻었습니다.
 
 위 프로젝트와 마찬가지로 게임에서 사용 가능합니다.
